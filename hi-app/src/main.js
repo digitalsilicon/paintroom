@@ -22,7 +22,7 @@ app.innerHTML = `
       <p class="brand">Hi.</p>
       <h1 class="headline">She’s glad you’re here.</h1>
       <p class="support">
-        A simple little hello — smile optional, but hers is already on.
+        A simple little hello you can hear — smile optional, but hers is already on.
       </p>
       <div class="actions">
         <button class="btn btn--primary" type="button" id="say-hi">
@@ -39,13 +39,27 @@ app.innerHTML = `
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
+const hiAudio = new Audio('/hi.wav')
+hiAudio.preload = 'auto'
 let hideTimer
+
+function playHi() {
+  hiAudio.pause()
+  hiAudio.currentTime = 0
+  const play = hiAudio.play()
+  if (play && typeof play.catch === 'function') {
+    play.catch(() => {
+      // Browsers may block autoplay until a user gesture.
+    })
+  }
+}
 
 function greet() {
   speech.classList.remove('is-visible')
   // restart animation
   void speech.offsetWidth
   speech.classList.add('is-visible')
+  playHi()
   clearTimeout(hideTimer)
   hideTimer = setTimeout(() => {
     speech.classList.remove('is-visible')
