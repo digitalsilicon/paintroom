@@ -16,7 +16,7 @@ app.innerHTML = `
     <div class="scene__wash" aria-hidden="true"></div>
     <div class="ambient" aria-hidden="true"></div>
 
-    <p class="bubble" id="speech" role="status" aria-live="polite">Hi!</p>
+    <p class="bubble" id="speech" role="status" aria-live="polite">Hello!</p>
 
     <section class="scene__content">
       <p class="brand">Hi.</p>
@@ -36,34 +36,63 @@ app.innerHTML = `
   </main>
 `
 
+const phrases = [
+  { text: 'Hello!', src: '/phrases/hello.wav' },
+  { text: 'How are you doing?', src: '/phrases/how-are-you.wav' },
+  { text: 'Lovely to see you again.', src: '/phrases/lovely.wav' },
+  { text: 'Stop clicking on me!', src: '/phrases/stop.wav' },
+]
+
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
-const hiAudio = new Audio('/hi.wav')
-hiAudio.preload = 'auto'
-let hideTimer
+const audioCache = phrases.map((phrase) => {
+  const audio = new Audio(phrase.src)
+  audio.preload = 'auto'
+  return audio
+})
 
-function playHi() {
-  hiAudio.pause()
-  hiAudio.currentTime = 0
-  const play = hiAudio.play()
+let phraseIndex = 0
+let hideTimer
+let activeAudio = null
+
+function playPhrase(index) {
+  if (activeAudio) {
+    activeAudio.pause()
+    activeAudio.currentTime = 0
+  }
+
+  const audio = audioCache[index]
+  activeAudio = audio
+  audio.currentTime = 0
+  const play = audio.play()
   if (play && typeof play.catch === 'function') {
     play.catch(() => {
       // Browsers may block autoplay until a user gesture.
     })
   }
+
+  return audio
 }
 
 function greet() {
+  const index = phraseIndex % phrases.length
+  phraseIndex += 1
+  const phrase = phrases[index]
+  const audio = playPhrase(index)
+  const visibleMs = Math.max(2800, Math.round((audio.duration || 2.2) * 1000) + 900)
+
+  speech.textContent = phrase.text
+  speech.style.setProperty('--bubble-ms', `${visibleMs}ms`)
   speech.classList.remove('is-visible')
   // restart animation
   void speech.offsetWidth
   speech.classList.add('is-visible')
-  playHi()
+
   clearTimeout(hideTimer)
   hideTimer = setTimeout(() => {
     speech.classList.remove('is-visible')
-  }, 2800)
+  }, visibleMs)
 }
 
 sayHi.addEventListener('click', greet)

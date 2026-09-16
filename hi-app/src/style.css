@@ -174,23 +174,25 @@ body {
   z-index: 3;
   top: clamp(12%, 18vh, 22%);
   left: clamp(4%, 8vw, 12%);
-  max-width: 11rem;
+  max-width: min(18rem, 72vw);
   padding: 0.85rem 1.15rem;
   border-radius: 1.35rem 1.35rem 1.35rem 0.35rem;
   background: rgba(255, 248, 242, 0.94);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-size: clamp(1.15rem, 2.6vw, 1.55rem);
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
   box-shadow: 0 18px 50px rgba(28, 20, 16, 0.28);
   opacity: 0;
   transform: translateY(12px) scale(0.92);
   pointer-events: none;
+  --bubble-ms: 3200ms;
 }
 
 .bubble.is-visible {
-  animation: say-hi 2.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: say-hi var(--bubble-ms) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .ambient {
