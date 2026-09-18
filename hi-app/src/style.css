@@ -50,6 +50,22 @@ body {
   z-index: 0;
 }
 
+.scene__portrait-rig {
+  position: absolute;
+  inset: 0;
+  /* Pivot near the face so the nod reads as a head motion. */
+  transform-origin: 50% 26%;
+  will-change: transform;
+}
+
+.scene.is-speaking .scene__portrait-rig {
+  animation: talk-nod var(--talk-ms, 1.9s) cubic-bezier(0.42, 0.05, 0.28, 1) both;
+}
+
+.scene.is-speaking.is-speaking-annoyed .scene__portrait-rig {
+  animation-name: talk-nod-annoyed;
+}
+
 .scene__media .portrait {
   position: absolute;
   inset: 0;
@@ -326,9 +342,62 @@ body {
   }
 }
 
+/* Soft conversational head motion — timed to phrase audio via --talk-ms. */
+@keyframes talk-nod {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  12% {
+    transform: rotate(-0.7deg) translate3d(0, 0.45%, 0);
+  }
+  28% {
+    transform: rotate(0.55deg) translate3d(0.15%, -0.25%, 0);
+  }
+  46% {
+    transform: rotate(-0.45deg) translate3d(-0.1%, 0.3%, 0);
+  }
+  64% {
+    transform: rotate(0.5deg) translate3d(0.12%, -0.2%, 0);
+  }
+  82% {
+    transform: rotate(-0.25deg) translate3d(0, 0.15%, 0);
+  }
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes talk-nod-annoyed {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  10% {
+    transform: rotate(0.9deg) translate3d(0.2%, -0.35%, 0);
+  }
+  26% {
+    transform: rotate(-1deg) translate3d(-0.15%, 0.5%, 0);
+  }
+  44% {
+    transform: rotate(0.75deg) translate3d(0.15%, -0.3%, 0);
+  }
+  62% {
+    transform: rotate(-0.7deg) translate3d(-0.1%, 0.35%, 0);
+  }
+  80% {
+    transform: rotate(0.4deg) translate3d(0.08%, -0.15%, 0);
+  }
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+}
+
 @media (min-width: 900px) {
   .scene {
     align-items: center;
+  }
+
+  .scene__portrait-rig {
+    transform-origin: 50% 24%;
   }
 
   .scene__media .portrait {
@@ -347,6 +416,10 @@ body {
 }
 
 @media (max-width: 640px) {
+  .scene__portrait-rig {
+    transform-origin: 58% 18%;
+  }
+
   .scene__media .portrait {
     object-position: 58% 12%;
   }
@@ -375,5 +448,9 @@ body {
   .portrait--frown,
   .scene__wash {
     transition: none;
+  }
+
+  .scene.is-speaking .scene__portrait-rig {
+    animation: none;
   }
 }

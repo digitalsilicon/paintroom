@@ -5,33 +5,34 @@ const app = document.querySelector('#app')
 app.innerHTML = `
   <main class="scene" aria-label="Greeting">
     <div class="scene__media" aria-hidden="true">
-      <img
-        class="portrait portrait--smile"
-        src="/smiling-girl-hi.png"
-        alt=""
-        width="1024"
-        height="1536"
-        fetchpriority="high"
-      />
-      <img
-        class="portrait portrait--frown"
-        src="/frowning-girl-hi.png"
-        alt=""
-        width="864"
-        height="1152"
-        loading="eager"
-      />
+      <div class="scene__portrait-rig" id="portrait-rig">
+        <img
+          class="portrait portrait--smile"
+          src="/smiling-girl-hi.png"
+          alt=""
+          width="1024"
+          height="1536"
+          fetchpriority="high"
+        />
+        <img
+          class="portrait portrait--frown"
+          src="/frowning-girl-hi.png"
+          alt=""
+          width="864"
+          height="1152"
+          loading="eager"
+        />
+        <button
+          class="nose-hotspot"
+          type="button"
+          id="nose"
+          aria-label="Boop her nose"
+          title="Nose"
+        ></button>
+      </div>
     </div>
     <div class="scene__wash" aria-hidden="true"></div>
     <div class="ambient" aria-hidden="true"></div>
-
-    <button
-      class="nose-hotspot"
-      type="button"
-      id="nose"
-      aria-label="Boop her nose"
-      title="Nose"
-    ></button>
 
     <p class="bubble" id="speech" role="status" aria-live="polite">Hi!</p>
 
@@ -106,6 +107,7 @@ boopAudio.volume = 1
 
 let phraseIndex = 0
 let hideTimer
+let speakTimer
 let activeAudio = null
 let audioUnlocked = false
 let lastBoopAt = 0
@@ -113,6 +115,24 @@ let noseArmed = true
 
 function setMood(mood) {
   scene.classList.toggle('is-annoyed', mood === 'annoyed')
+}
+
+function stopSpeaking() {
+  clearTimeout(speakTimer)
+  speakTimer = null
+  scene.classList.remove('is-speaking', 'is-speaking-annoyed')
+}
+
+function startSpeaking(durationSec, { annoyed = false } = {}) {
+  stopSpeaking()
+  const ms = Math.max(650, Math.round(durationSec * 1000))
+  scene.style.setProperty('--talk-ms', `${ms}ms`)
+  scene.classList.toggle('is-speaking-annoyed', annoyed)
+  // Restart the keyframed nod even if she was already speaking.
+  scene.classList.remove('is-speaking')
+  void scene.offsetWidth
+  scene.classList.add('is-speaking')
+  speakTimer = setTimeout(stopSpeaking, ms)
 }
 
 function stopActiveAudio() {
@@ -197,6 +217,7 @@ function playBoop() {
   unlockAudio()
   // Brief interrupt only — does not advance the greeting playlist.
   stopActiveAudio()
+  stopSpeaking()
   // If we cut off “Stop clicking…”, drop the frown so it cannot stick.
   setMood(null)
 
@@ -244,6 +265,10 @@ function greet() {
       : phrase.durationSec
   const visibleMs = Math.max(2800, Math.round(durationSec * 1000) + 900)
   showBubble(phrase, visibleMs)
+  startSpeaking(durationSec, { annoyed: phrase.mood === 'annoyed' })
+  if (audio) {
+    audio.addEventListener('ended', stopSpeaking, { once: true })
+  }
 }
 
 /** Visual-only intro — never call play() without a user gesture. */
@@ -270,6 +295,10 @@ function onNosePointerLeave() {
 }
 
 function positionNoseHotspot() {
+  // Skip mid-nod: nose lives inside the talking rig, so last layout coords
+  // stay correct in local space while the parent transform animates.
+  if (scene.classList.contains('is-speaking')) return
+
   const nw = smilePortrait.naturalWidth || 1024
   const nh = smilePortrait.naturalHeight || 1536
   const rect = smilePortrait.getBoundingClientRect()
