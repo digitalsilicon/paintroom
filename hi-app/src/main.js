@@ -77,9 +77,27 @@ const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
 const nose = document.querySelector('#nose')
+
+// Prefetch each phrase so the first click is not racing the network.
 const audioCache = phrases.map((phrase) => {
   const audio = new Audio(phrase.src)
   audio.preload = 'auto'
+  audio.addEventListener(
+    'error',
+    () => {
+      phrase.missing = true
+    },
+    { once: true },
+  )
+  audio.addEventListener(
+    'loadedmetadata',
+    () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        phrase.durationSec = audio.duration
+      }
+    },
+    { once: true },
+  )
   return audio
 })
 const boopAudio = new Audio('/phrases/boop.wav')
@@ -99,89 +117,80 @@ function setMood(mood) {
 
 function stopActiveAudio() {
   if (!activeAudio) return
-  activeAudio.pause()
-  activeAudio.currentTime = 0
+  try {
+    activeAudio.pause()
+  } catch {
+    // ignore
+  }
+  try {
+    activeAudio.currentTime = 0
+  } catch {
+    // ignore seek errors on unloaded / failed elements
+  }
   activeAudio = null
 }
 
+/**
+ * Must run inside a user-gesture stack (pointerdown/click).
+ * Do not mark unlocked unless play actually succeeds.
+ */
 function unlockAudio() {
-  if (audioUnlocked) return
-  audioUnlocked = true
-  const silent = boopAudio.cloneNode()
+  if (audioUnlocked) return Promise.resolve(true)
+  const silent = boopAudio.cloneNode(true)
+  silent.muted = true
   silent.volume = 0
-  silent.play().then(() => {
-    silent.pause()
-  }).catch(() => {})
+  const play = silent.play()
+  if (!play || typeof play.then !== 'function') {
+    audioUnlocked = true
+    return Promise.resolve(true)
+  }
+  return play
+    .then(() => {
+      silent.pause()
+      audioUnlocked = true
+      return true
+    })
+    .catch(() => false)
 }
 
-function objectPositionY() {
-  if (window.matchMedia('(max-width: 640px)').matches) return 0.12
-  if (window.matchMedia('(min-width: 900px)').matches) return 0.22
-  return 0.18
-}
+function playClip(src, { volume = 1 } = {}) {
+  stopActiveAudio()
+  // Fresh node each time — reused HTMLAudioElement + failed autoplay
+  // can leave elements in a state where later play() never audibly starts.
+  const clip = new Audio(src)
+  clip.preload = 'auto'
+  clip.volume = volume
+  activeAudio = clip
 
-function objectPositionX() {
-  if (window.matchMedia('(max-width: 640px)').matches) return 0.58
-  return 0.5
-}
+  const attempt = () => {
+    try {
+      clip.currentTime = 0
+    } catch {
+      // ignore
+    }
+    return clip.play()
+  }
 
-function mapImagePointToScene(point) {
-  const nw = smilePortrait.naturalWidth || 1024
-  const nh = smilePortrait.naturalHeight || 1536
-  const rect = smilePortrait.getBoundingClientRect()
-  const sceneRect = scene.getBoundingClientRect()
-  if (rect.width < 2 || rect.height < 2) return null
-
-  // Undo CSS scale(1.04) so object-fit math uses the layout box.
-  const layoutW = rect.width / PORTRAIT_SCALE
-  const layoutH = rect.height / PORTRAIT_SCALE
-  const layoutLeft = rect.left + (rect.width - layoutW) / 2
-  const layoutTop = rect.top + (rect.height - layoutH) / 2
-
-  const cover = Math.max(layoutW / nw, layoutH / nh)
-  const dispW = nw * cover
-  const dispH = nh * cover
-  const offsetX = (layoutW - dispW) * objectPositionX()
-  const offsetY = (layoutH - dispH) * objectPositionY()
-
-  let x = layoutLeft - sceneRect.left + offsetX + point.x * dispW
-  let y = layoutTop - sceneRect.top + offsetY + point.y * dispH
-
-  // Re-apply the same center scale the portrait uses visually.
-  const cx = rect.left - sceneRect.left + rect.width / 2
-  const cy = rect.top - sceneRect.top + rect.height / 2
-  x = cx + (x - cx) * PORTRAIT_SCALE
-  y = cy + (y - cy) * PORTRAIT_SCALE
-
-  return { x, y, layoutW, layoutH }
-}
-
-function positionNoseHotspot() {
-  const noseMapped = mapImagePointToScene(noseImagePoint())
-  if (!noseMapped) return
-
-  // Small tip-only target — not the whole nose/bridge.
-  const noseSize = Math.max(28, Math.min(noseMapped.layoutW, noseMapped.layoutH) * 0.045)
-  nose.style.left = `${noseMapped.x}px`
-  nose.style.top = `${noseMapped.y}px`
-  nose.style.width = `${noseSize}px`
-  nose.style.height = `${noseSize}px`
+  const play = attempt()
+  if (play && typeof play.catch === 'function') {
+    play.catch(() => {
+      // One microtask retry helps after a prior NotAllowedError unlock.
+      window.setTimeout(() => {
+        if (activeAudio !== clip) return
+        attempt().catch(() => {})
+      }, 0)
+    })
+  }
+  return clip
 }
 
 function playPhrase(index) {
-  stopActiveAudio()
-
-  const audio = audioCache[index]
-  activeAudio = audio
-  audio.currentTime = 0
-  const play = audio.play()
-  if (play && typeof play.catch === 'function') {
-    play.catch(() => {
-      // Browsers may block autoplay until a user gesture.
-    })
+  const phrase = phrases[index]
+  if (!phrase || phrase.missing) {
+    stopActiveAudio()
+    return null
   }
-
-  return audio
+  return playClip(phrase.src)
 }
 
 function playBoop() {
@@ -191,19 +200,7 @@ function playBoop() {
   // If we cut off “Stop clicking…”, drop the frown so it cannot stick.
   setMood(null)
 
-  const clip = boopAudio.cloneNode(true)
-  clip.volume = 1
-  activeAudio = clip
-
-  const play = clip.play()
-  if (play && typeof play.catch === 'function') {
-    play.catch(() => {
-      window.setTimeout(() => {
-        clip.currentTime = 0
-        clip.play().catch(() => {})
-      }, 0)
-    })
-  }
+  playClip('/phrases/boop.wav')
 
   const visibleMs = 1200
   speech.textContent = 'Boop!'
@@ -218,23 +215,11 @@ function playBoop() {
   }, visibleMs)
 }
 
-function greet() {
-  unlockAudio()
-  const index = phraseIndex % phrases.length
-  phraseIndex += 1
-  const phrase = phrases[index]
-  const audio = playPhrase(index)
-  const durationSec =
-    Number.isFinite(audio.duration) && audio.duration > 0
-      ? audio.duration
-      : phrase.durationSec
-  const visibleMs = Math.max(2800, Math.round(durationSec * 1000) + 900)
-
+function showBubble(phrase, visibleMs) {
   speech.textContent = phrase.text
   speech.style.setProperty('--bubble-ms', `${visibleMs}ms`)
   setMood(phrase.mood)
   speech.classList.remove('is-visible')
-  // restart animation
   void speech.offsetWidth
   speech.classList.add('is-visible')
 
@@ -243,6 +228,30 @@ function greet() {
     speech.classList.remove('is-visible')
     setMood(null)
   }, visibleMs)
+}
+
+function greet() {
+  // Caller should be a user gesture (button click). Unlock first while
+  // still in that gesture stack.
+  unlockAudio()
+  const index = phraseIndex % phrases.length
+  phraseIndex += 1
+  const phrase = phrases[index]
+  const audio = playPhrase(index)
+  const durationSec =
+    audio && Number.isFinite(audio.duration) && audio.duration > 0
+      ? audio.duration
+      : phrase.durationSec
+  const visibleMs = Math.max(2800, Math.round(durationSec * 1000) + 900)
+  showBubble(phrase, visibleMs)
+}
+
+/** Visual-only intro — never call play() without a user gesture. */
+function softIntro() {
+  const phrase = phrases[0]
+  const visibleMs = Math.max(2800, Math.round(phrase.durationSec * 1000) + 900)
+  showBubble(phrase, visibleMs)
+  // Leave phraseIndex at 0 so the first click speaks “Hi!” with audio.
 }
 
 function onNosePointerEnter(event) {
@@ -260,6 +269,56 @@ function onNosePointerLeave() {
   noseArmed = true
 }
 
+function positionNoseHotspot() {
+  const nw = smilePortrait.naturalWidth || 1024
+  const nh = smilePortrait.naturalHeight || 1536
+  const rect = smilePortrait.getBoundingClientRect()
+  const sceneRect = scene.getBoundingClientRect()
+  if (rect.width < 2 || rect.height < 2) return
+
+  const layoutW = rect.width / PORTRAIT_SCALE
+  const layoutH = rect.height / PORTRAIT_SCALE
+  const layoutLeft = rect.left + (rect.width - layoutW) / 2
+  const layoutTop = rect.top + (rect.height - layoutH) / 2
+
+  const objectPositionY = window.matchMedia('(max-width: 640px)').matches
+    ? 0.12
+    : window.matchMedia('(min-width: 900px)').matches
+      ? 0.22
+      : 0.18
+  const objectPositionX = window.matchMedia('(max-width: 640px)').matches
+    ? 0.58
+    : 0.5
+
+  const cover = Math.max(layoutW / nw, layoutH / nh)
+  const dispW = nw * cover
+  const dispH = nh * cover
+  const offsetX = (layoutW - dispW) * objectPositionX
+  const offsetY = (layoutH - dispH) * objectPositionY
+
+  const point = noseImagePoint()
+  let x = layoutLeft - sceneRect.left + offsetX + point.x * dispW
+  let y = layoutTop - sceneRect.top + offsetY + point.y * dispH
+
+  const cx = rect.left - sceneRect.left + rect.width / 2
+  const cy = rect.top - sceneRect.top + rect.height / 2
+  x = cx + (x - cx) * PORTRAIT_SCALE
+  y = cy + (y - cy) * PORTRAIT_SCALE
+
+  const noseSize = Math.max(28, Math.min(layoutW, layoutH) * 0.045)
+  nose.style.left = `${x}px`
+  nose.style.top = `${y}px`
+  nose.style.width = `${noseSize}px`
+  nose.style.height = `${noseSize}px`
+}
+
+// Unlock during pointerdown so the gesture still covers the later play().
+sayHi.addEventListener('pointerdown', () => {
+  unlockAudio()
+})
+again.addEventListener('pointerdown', () => {
+  unlockAudio()
+})
 sayHi.addEventListener('click', greet)
 again.addEventListener('click', greet)
 nose.addEventListener('pointerenter', onNosePointerEnter)
@@ -275,5 +334,16 @@ window.setTimeout(positionNoseHotspot, 50)
 window.setTimeout(positionNoseHotspot, 400)
 window.setTimeout(positionNoseHotspot, 1000)
 
-// Soft auto-greet after the portrait settles in
-window.setTimeout(greet, 900)
+// Soft visual intro only — audio starts on the first button gesture.
+window.setTimeout(softIntro, 900)
+
+// Best-effort HEAD check so missing files skip play without breaking the UI.
+phrases.forEach((phrase) => {
+  fetch(phrase.src, { method: 'HEAD', cache: 'force-cache' })
+    .then((res) => {
+      if (!res.ok) phrase.missing = true
+    })
+    .catch(() => {
+      phrase.missing = true
+    })
+})
