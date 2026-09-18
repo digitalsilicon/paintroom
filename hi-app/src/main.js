@@ -61,13 +61,14 @@ const phrases = [
   { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14, mood: 'annoyed' },
 ]
 
-// Mouth / open-smile center as % of the scene (matches Project machine: lips ~y 490–530).
-function lipsScenePercent() {
+function lipsImagePoint() {
   if (window.matchMedia('(max-width: 640px)').matches) {
-    return { left: 57, top: 42 }
+    return { x: 0.52, y: 0.372 }
   }
-  return { left: 50, top: 51 }
+  return { x: 0.5, y: 0.348 }
 }
+
+const PORTRAIT_SCALE = 1.04
 
 const scene = document.querySelector('.scene')
 const smilePortrait = document.querySelector('.portrait--smile')
@@ -111,16 +112,52 @@ function unlockAudio() {
   }).catch(() => {})
 }
 
-function positionLipsHotspot() {
-  const sceneRect = scene.getBoundingClientRect()
-  if (sceneRect.width < 2 || sceneRect.height < 2) return
+function objectPositionY() {
+  if (window.matchMedia('(max-width: 640px)').matches) return 0.12
+  if (window.matchMedia('(min-width: 900px)').matches) return 0.22
+  return 0.18
+}
 
-  const { left, top } = lipsScenePercent()
-  const size = Math.max(64, Math.min(sceneRect.width, sceneRect.height) * 0.12)
-  lips.style.left = `${left}%`
-  lips.style.top = `${top}%`
-  lips.style.width = `${size * 1.55}px`
-  lips.style.height = `${size * 1.05}px`
+function objectPositionX() {
+  if (window.matchMedia('(max-width: 640px)').matches) return 0.58
+  return 0.5
+}
+
+function positionLipsHotspot() {
+  const nw = smilePortrait.naturalWidth || 1024
+  const nh = smilePortrait.naturalHeight || 1536
+  const rect = smilePortrait.getBoundingClientRect()
+  const sceneRect = scene.getBoundingClientRect()
+  if (rect.width < 2 || rect.height < 2) return
+
+  // Undo CSS scale(1.04) so object-fit math uses the layout box.
+  const layoutW = rect.width / PORTRAIT_SCALE
+  const layoutH = rect.height / PORTRAIT_SCALE
+  const layoutLeft = rect.left + (rect.width - layoutW) / 2
+  const layoutTop = rect.top + (rect.height - layoutH) / 2
+
+  const cover = Math.max(layoutW / nw, layoutH / nh)
+  const dispW = nw * cover
+  const dispH = nh * cover
+  const offsetX = (layoutW - dispW) * objectPositionX()
+  const offsetY = (layoutH - dispH) * objectPositionY()
+
+  const point = lipsImagePoint()
+  let x = layoutLeft - sceneRect.left + offsetX + point.x * dispW
+  let y = layoutTop - sceneRect.top + offsetY + point.y * dispH
+
+  // Re-apply the same center scale the portrait uses visually.
+  const cx = rect.left - sceneRect.left + rect.width / 2
+  const cy = rect.top - sceneRect.top + rect.height / 2
+  x = cx + (x - cx) * PORTRAIT_SCALE
+  y = cy + (y - cy) * PORTRAIT_SCALE
+
+  // Modest mouth-sized target — position is what matters.
+  const size = Math.max(56, Math.min(layoutW, layoutH) * 0.09)
+  lips.style.left = `${x}px`
+  lips.style.top = `${y}px`
+  lips.style.width = `${size * 1.6}px`
+  lips.style.height = `${size * 0.85}px`
 }
 
 function playPhrase(index) {
@@ -210,6 +247,7 @@ if (smilePortrait.complete) {
 }
 window.setTimeout(positionLipsHotspot, 50)
 window.setTimeout(positionLipsHotspot, 400)
+window.setTimeout(positionLipsHotspot, 1000)
 
 // Soft auto-greet after the portrait settles in
 window.setTimeout(greet, 900)
