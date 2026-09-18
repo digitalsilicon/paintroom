@@ -129,12 +129,12 @@ body {
   position: absolute;
   z-index: 3;
   left: 50.5%;
-  top: 41.5%;
-  width: clamp(4.75rem, 13vw, 7.25rem);
-  height: clamp(2.35rem, 5.8vw, 3.5rem);
+  top: 55.5%;
+  width: clamp(5rem, 14vw, 7.75rem);
+  height: clamp(2.75rem, 6.5vw, 4rem);
   transform: translate(-50%, -50%);
   border: none;
-  border-radius: 50% / 60%;
+  border-radius: 50% / 65%;
   padding: 0;
   background: transparent;
   cursor: pointer;
@@ -343,9 +343,9 @@ body {
 
   .lips-hotspot {
     left: 50%;
-    top: 43%;
-    width: clamp(5rem, 9vw, 7rem);
-    height: clamp(2.5rem, 4.2vw, 3.35rem);
+    top: 57%;
+    width: clamp(5.25rem, 9.5vw, 7.5rem);
+    height: clamp(2.9rem, 4.6vw, 3.75rem);
   }
 }
 
@@ -361,9 +361,9 @@ body {
 
   .lips-hotspot {
     left: 57%;
-    top: 34%;
-    width: clamp(5.25rem, 28vw, 7rem);
-    height: clamp(2.6rem, 12vw, 3.4rem);
+    top: 47%;
+    width: clamp(5.5rem, 30vw, 7.25rem);
+    height: clamp(2.9rem, 13vw, 3.75rem);
   }
 }
 
