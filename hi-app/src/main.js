@@ -63,9 +63,9 @@ const phrases = [
 
 function lipsImagePoint() {
   if (window.matchMedia('(max-width: 640px)').matches) {
-    return { x: 0.52, y: 0.372 }
+    return { x: 0.52, y: 0.388 }
   }
-  return { x: 0.5, y: 0.348 }
+  return { x: 0.5, y: 0.372 }
 }
 
 const PORTRAIT_SCALE = 1.04
