@@ -61,15 +61,13 @@ const phrases = [
   { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14, mood: 'annoyed' },
 ]
 
-// Mouth / open-smile center in smiling-girl-hi.png (natural-image fractions).
-// Mobile uses a slightly lower fraction because object-position is 58% 12%.
-function lipsImagePoint() {
+// Mouth / open-smile center as % of the scene (matches Project machine: lips ~y 490–530).
+function lipsScenePercent() {
   if (window.matchMedia('(max-width: 640px)').matches) {
-    return { x: 0.52, y: 0.413 }
+    return { left: 57, top: 42 }
   }
-  return { x: 0.5, y: 0.395 }
+  return { left: 50, top: 51 }
 }
-const PORTRAIT_SCALE = 1.04
 
 const scene = document.querySelector('.scene')
 const smilePortrait = document.querySelector('.portrait--smile')
@@ -113,51 +111,16 @@ function unlockAudio() {
   }).catch(() => {})
 }
 
-function objectPositionY() {
-  if (window.matchMedia('(max-width: 640px)').matches) return 0.12
-  if (window.matchMedia('(min-width: 900px)').matches) return 0.22
-  return 0.18
-}
-
-function objectPositionX() {
-  if (window.matchMedia('(max-width: 640px)').matches) return 0.58
-  return 0.5
-}
-
 function positionLipsHotspot() {
-  const nw = smilePortrait.naturalWidth || 1024
-  const nh = smilePortrait.naturalHeight || 1536
-  const rect = smilePortrait.getBoundingClientRect()
   const sceneRect = scene.getBoundingClientRect()
-  if (rect.width < 2 || rect.height < 2) return
+  if (sceneRect.width < 2 || sceneRect.height < 2) return
 
-  // Undo CSS scale(1.04) so object-fit math uses the layout box.
-  const layoutW = rect.width / PORTRAIT_SCALE
-  const layoutH = rect.height / PORTRAIT_SCALE
-  const layoutLeft = rect.left + (rect.width - layoutW) / 2
-  const layoutTop = rect.top + (rect.height - layoutH) / 2
-
-  const cover = Math.max(layoutW / nw, layoutH / nh)
-  const dispW = nw * cover
-  const dispH = nh * cover
-  const offsetX = (layoutW - dispW) * objectPositionX()
-  const offsetY = (layoutH - dispH) * objectPositionY()
-
-  const lipsPoint = lipsImagePoint()
-  let x = layoutLeft - sceneRect.left + offsetX + lipsPoint.x * dispW
-  let y = layoutTop - sceneRect.top + offsetY + lipsPoint.y * dispH
-
-  // Re-apply the same center scale the portrait uses visually.
-  const cx = rect.left - sceneRect.left + rect.width / 2
-  const cy = rect.top - sceneRect.top + rect.height / 2
-  x = cx + (x - cx) * PORTRAIT_SCALE
-  y = cy + (y - cy) * PORTRAIT_SCALE
-
-  const size = Math.max(64, Math.min(rect.width, rect.height) * 0.125)
-  lips.style.left = `${x}px`
-  lips.style.top = `${y}px`
-  lips.style.width = `${size * 1.5}px`
-  lips.style.height = `${size * 0.95}px`
+  const { left, top } = lipsScenePercent()
+  const size = Math.max(64, Math.min(sceneRect.width, sceneRect.height) * 0.12)
+  lips.style.left = `${left}%`
+  lips.style.top = `${top}%`
+  lips.style.width = `${size * 1.55}px`
+  lips.style.height = `${size * 1.05}px`
 }
 
 function playPhrase(index) {

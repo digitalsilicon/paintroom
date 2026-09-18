@@ -128,11 +128,11 @@ body {
 .lips-hotspot {
   position: absolute;
   z-index: 4;
-  /* Fallbacks if JS positioning has not run yet — over the mouth, not the nose. */
+  /* Mouth center — Project machine lips are ~y 490–530 on ~1000px viewports. */
   left: 50%;
-  top: 60%;
+  top: 51%;
   width: clamp(5.5rem, 15vw, 8rem);
-  height: clamp(3rem, 7vw, 4.25rem);
+  height: clamp(3.25rem, 7.5vw, 4.5rem);
   transform: translate(-50%, -50%);
   border: none;
   border-radius: 50% / 65%;
@@ -347,7 +347,7 @@ body {
 
   .lips-hotspot {
     left: 50%;
-    top: 60%;
+    top: 51%;
   }
 }
 
@@ -362,8 +362,8 @@ body {
   }
 
   .lips-hotspot {
-    left: 58%;
-    top: 46%;
+    left: 57%;
+    top: 42%;
   }
 }
 
