@@ -125,17 +125,12 @@ body {
   pointer-events: auto;
 }
 
-.lips-hotspot {
+.lips-hotspot,
+.nose-hotspot {
   position: absolute;
   z-index: 4;
-  /* Fallback only — JS positionLipsHotspot() sets pixel center from lipsImagePoint(). */
-  left: 50%;
-  top: 45%;
-  width: clamp(4.5rem, 12vw, 7rem);
-  height: clamp(2.5rem, 6vw, 3.75rem);
   transform: translate(-50%, -50%);
   border: none;
-  border-radius: 50% / 65%;
   padding: 0;
   margin: 0;
   background: transparent;
@@ -145,7 +140,28 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.lips-hotspot:focus-visible {
+.lips-hotspot {
+  /* Fallback only — JS positionFaceHotspots() sets pixel center from lipsImagePoint(). */
+  left: 50%;
+  top: 45%;
+  width: clamp(4.5rem, 12vw, 7rem);
+  height: clamp(2.5rem, 6vw, 3.75rem);
+  border-radius: 50% / 65%;
+}
+
+.nose-hotspot {
+  /* Fallback only — JS positionFaceHotspots() sets pixel center from noseImagePoint(). */
+  left: 50%;
+  top: 40%;
+  width: clamp(1.5rem, 3.5vw, 2.25rem);
+  height: clamp(1.5rem, 3.5vw, 2.25rem);
+  border-radius: 50%;
+  z-index: 5;
+  cursor: crosshair;
+}
+
+.lips-hotspot:focus-visible,
+.nose-hotspot:focus-visible {
   outline: 2px solid rgba(255, 248, 242, 0.85);
   outline-offset: 4px;
 }
