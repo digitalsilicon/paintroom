@@ -153,11 +153,11 @@ function positionLipsHotspot() {
   x = cx + (x - cx) * PORTRAIT_SCALE
   y = cy + (y - cy) * PORTRAIT_SCALE
 
-  const size = Math.max(60, Math.min(rect.width, rect.height) * 0.12)
+  const size = Math.max(64, Math.min(rect.width, rect.height) * 0.125)
   lips.style.left = `${x}px`
   lips.style.top = `${y}px`
-  lips.style.width = `${size * 1.45}px`
-  lips.style.height = `${size * 0.8}px`
+  lips.style.width = `${size * 1.5}px`
+  lips.style.height = `${size * 0.95}px`
 }
 
 function playPhrase(index) {
