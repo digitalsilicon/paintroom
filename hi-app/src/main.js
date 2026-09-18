@@ -25,6 +25,14 @@ app.innerHTML = `
     <div class="scene__wash" aria-hidden="true"></div>
     <div class="ambient" aria-hidden="true"></div>
 
+    <button
+      class="lips-hotspot"
+      type="button"
+      id="lips"
+      aria-label="Touch her lips"
+      title="Lips"
+    ></button>
+
     <p class="bubble" id="speech" role="status" aria-live="polite">Hi!</p>
 
     <section class="scene__content">
@@ -57,11 +65,14 @@ const scene = document.querySelector('.scene')
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
+const lips = document.querySelector('#lips')
 const audioCache = phrases.map((phrase) => {
   const audio = new Audio(phrase.src)
   audio.preload = 'auto'
   return audio
 })
+const moanAudio = new Audio('/phrases/moan.wav')
+moanAudio.preload = 'auto'
 
 let phraseIndex = 0
 let hideTimer
@@ -71,11 +82,17 @@ function setMood(mood) {
   scene.classList.toggle('is-annoyed', mood === 'annoyed')
 }
 
+function stopActiveAudio() {
+  if (!activeAudio) return
+  activeAudio.pause()
+  activeAudio.currentTime = 0
+  activeAudio = null
+}
+
 function playPhrase(index) {
-  if (activeAudio) {
-    activeAudio.pause()
-    activeAudio.currentTime = 0
-  }
+  stopActiveAudio()
+  moanAudio.pause()
+  moanAudio.currentTime = 0
 
   const audio = audioCache[index]
   activeAudio = audio
@@ -88,6 +105,18 @@ function playPhrase(index) {
   }
 
   return audio
+}
+
+function playMoan() {
+  // Prefer a clean moan over overlapping speech.
+  stopActiveAudio()
+  moanAudio.pause()
+  moanAudio.currentTime = 0
+  activeAudio = moanAudio
+  const play = moanAudio.play()
+  if (play && typeof play.catch === 'function') {
+    play.catch(() => {})
+  }
 }
 
 function greet() {
@@ -118,6 +147,10 @@ function greet() {
 
 sayHi.addEventListener('click', greet)
 again.addEventListener('click', greet)
+lips.addEventListener('click', (event) => {
+  event.stopPropagation()
+  playMoan()
+})
 
 // Soft auto-greet after the portrait settles in
 window.setTimeout(greet, 900)

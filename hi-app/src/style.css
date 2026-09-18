@@ -117,6 +117,33 @@ body {
   padding: clamp(1.5rem, 4vw, 3rem);
   padding-bottom: clamp(2rem, 6vw, 4rem);
   color: #fff8f2;
+  pointer-events: none;
+}
+
+.scene__content .actions,
+.scene__content .btn {
+  pointer-events: auto;
+}
+
+.lips-hotspot {
+  position: absolute;
+  z-index: 3;
+  left: 50.5%;
+  top: 41.5%;
+  width: clamp(4.75rem, 13vw, 7.25rem);
+  height: clamp(2.35rem, 5.8vw, 3.5rem);
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 50% / 60%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lips-hotspot:focus-visible {
+  outline: 2px solid rgba(255, 248, 242, 0.85);
+  outline-offset: 4px;
 }
 
 .brand {
@@ -313,6 +340,13 @@ body {
     left: clamp(42%, 48vw, 54%);
     top: clamp(18%, 22vh, 28%);
   }
+
+  .lips-hotspot {
+    left: 50%;
+    top: 43%;
+    width: clamp(5rem, 9vw, 7rem);
+    height: clamp(2.5rem, 4.2vw, 3.35rem);
+  }
 }
 
 @media (max-width: 640px) {
@@ -323,6 +357,13 @@ body {
   .bubble {
     top: 10%;
     left: 5%;
+  }
+
+  .lips-hotspot {
+    left: 57%;
+    top: 34%;
+    width: clamp(5.25rem, 28vw, 7rem);
+    height: clamp(2.6rem, 12vw, 3.4rem);
   }
 }
 
