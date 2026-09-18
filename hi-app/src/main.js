@@ -26,14 +26,6 @@ app.innerHTML = `
     <div class="ambient" aria-hidden="true"></div>
 
     <button
-      class="lips-hotspot"
-      type="button"
-      id="lips"
-      aria-label="Touch her lips"
-      title="Lips"
-    ></button>
-
-    <button
       class="nose-hotspot"
       type="button"
       id="nose"
@@ -69,14 +61,6 @@ const phrases = [
   { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14, mood: 'annoyed' },
 ]
 
-function lipsImagePoint() {
-  if (window.matchMedia('(max-width: 640px)').matches) {
-    return { x: 0.52, y: 0.388 }
-  }
-  return { x: 0.5, y: 0.372 }
-}
-
-// Nose tip sits just above the lips hotspot (prior Project tune: ~0.348).
 function noseImagePoint() {
   if (window.matchMedia('(max-width: 640px)').matches) {
     return { x: 0.52, y: 0.348 }
@@ -92,16 +76,12 @@ const smilePortrait = document.querySelector('.portrait--smile')
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
-const lips = document.querySelector('#lips')
 const nose = document.querySelector('#nose')
 const audioCache = phrases.map((phrase) => {
   const audio = new Audio(phrase.src)
   audio.preload = 'auto'
   return audio
 })
-const moanAudio = new Audio('/phrases/moan.wav')
-moanAudio.preload = 'auto'
-moanAudio.volume = 1
 const boopAudio = new Audio('/phrases/boop.wav')
 boopAudio.preload = 'auto'
 boopAudio.volume = 1
@@ -110,7 +90,6 @@ let phraseIndex = 0
 let hideTimer
 let activeAudio = null
 let audioUnlocked = false
-let lastMoanAt = 0
 let lastBoopAt = 0
 let noseArmed = true
 
@@ -128,7 +107,7 @@ function stopActiveAudio() {
 function unlockAudio() {
   if (audioUnlocked) return
   audioUnlocked = true
-  const silent = moanAudio.cloneNode()
+  const silent = boopAudio.cloneNode()
   silent.volume = 0
   silent.play().then(() => {
     silent.pause()
@@ -177,17 +156,7 @@ function mapImagePointToScene(point) {
   return { x, y, layoutW, layoutH }
 }
 
-function positionFaceHotspots() {
-  const lipsMapped = mapImagePointToScene(lipsImagePoint())
-  if (!lipsMapped) return
-
-  // Modest mouth-sized target — position is what matters.
-  const lipsSize = Math.max(56, Math.min(lipsMapped.layoutW, lipsMapped.layoutH) * 0.09)
-  lips.style.left = `${lipsMapped.x}px`
-  lips.style.top = `${lipsMapped.y}px`
-  lips.style.width = `${lipsSize * 1.6}px`
-  lips.style.height = `${lipsSize * 0.85}px`
-
+function positionNoseHotspot() {
   const noseMapped = mapImagePointToScene(noseImagePoint())
   if (!noseMapped) return
 
@@ -213,27 +182,6 @@ function playPhrase(index) {
   }
 
   return audio
-}
-
-function playMoan() {
-  unlockAudio()
-  // Prefer a clean moan over overlapping speech.
-  stopActiveAudio()
-
-  // Fresh node each time avoids stuck currentTime / interrupted play() states.
-  const clip = moanAudio.cloneNode(true)
-  clip.volume = 1
-  activeAudio = clip
-
-  const play = clip.play()
-  if (play && typeof play.catch === 'function') {
-    play.catch(() => {
-      window.setTimeout(() => {
-        clip.currentTime = 0
-        clip.play().catch(() => {})
-      }, 0)
-    })
-  }
 }
 
 function playBoop() {
@@ -297,16 +245,6 @@ function greet() {
   }, visibleMs)
 }
 
-function onLipsActivate(event) {
-  event.preventDefault()
-  event.stopPropagation()
-  const now = Date.now()
-  // pointerdown + click can both fire; keep a single moan per gesture.
-  if (now - lastMoanAt < 280) return
-  lastMoanAt = now
-  playMoan()
-}
-
 function onNosePointerEnter(event) {
   event.stopPropagation()
   if (!noseArmed) return
@@ -324,20 +262,18 @@ function onNosePointerLeave() {
 
 sayHi.addEventListener('click', greet)
 again.addEventListener('click', greet)
-lips.addEventListener('pointerdown', onLipsActivate)
-lips.addEventListener('click', onLipsActivate)
 nose.addEventListener('pointerenter', onNosePointerEnter)
 nose.addEventListener('pointerleave', onNosePointerLeave)
 
-window.addEventListener('resize', positionFaceHotspots)
+window.addEventListener('resize', positionNoseHotspot)
 if (smilePortrait.complete) {
-  positionFaceHotspots()
+  positionNoseHotspot()
 } else {
-  smilePortrait.addEventListener('load', positionFaceHotspots, { once: true })
+  smilePortrait.addEventListener('load', positionNoseHotspot, { once: true })
 }
-window.setTimeout(positionFaceHotspots, 50)
-window.setTimeout(positionFaceHotspots, 400)
-window.setTimeout(positionFaceHotspots, 1000)
+window.setTimeout(positionNoseHotspot, 50)
+window.setTimeout(positionNoseHotspot, 400)
+window.setTimeout(positionNoseHotspot, 1000)
 
 // Soft auto-greet after the portrait settles in
 window.setTimeout(greet, 900)
