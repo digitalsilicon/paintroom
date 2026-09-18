@@ -50,13 +50,63 @@ body {
   z-index: 0;
 }
 
-.scene__media img {
+.scene__portrait-rig {
+  position: absolute;
+  inset: 0;
+  /* Pivot near the face so the nod reads as a head motion. */
+  transform-origin: 50% 26%;
+  will-change: transform;
+}
+
+.scene.is-speaking .scene__portrait-rig {
+  animation: talk-nod var(--talk-ms, 1.9s) cubic-bezier(0.42, 0.05, 0.28, 1) both;
+}
+
+.scene.is-speaking.is-speaking-annoyed .scene__portrait-rig {
+  animation-name: talk-nod-annoyed;
+}
+
+.scene__media .portrait {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 18%;
   transform: scale(1.04);
+}
+
+.portrait--smile {
   animation: ease-in 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+
+.portrait--frown {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  z-index: 1;
+}
+
+.scene.is-annoyed .portrait--smile {
+  opacity: 0;
+}
+
+.scene.is-annoyed .portrait--frown {
+  opacity: 1;
+}
+
+.scene.is-annoyed .scene__wash {
+  background:
+    radial-gradient(ellipse 70% 50% at 70% 20%, rgba(180, 150, 140, 0.28), transparent 60%),
+    linear-gradient(
+      180deg,
+      rgba(28, 20, 16, 0.28) 0%,
+      rgba(28, 20, 16, 0.16) 38%,
+      rgba(28, 20, 16, 0.62) 72%,
+      rgba(28, 20, 16, 0.86) 100%
+    );
+  transition: background 0.45s ease;
 }
 
 .scene__wash {
@@ -64,6 +114,7 @@ body {
   inset: 0;
   z-index: 1;
   pointer-events: none;
+  transition: background 0.45s ease;
   background:
     radial-gradient(ellipse 70% 50% at 70% 20%, var(--glow), transparent 60%),
     linear-gradient(
@@ -82,6 +133,37 @@ body {
   padding: clamp(1.5rem, 4vw, 3rem);
   padding-bottom: clamp(2rem, 6vw, 4rem);
   color: #fff8f2;
+  pointer-events: none;
+}
+
+.scene__content .actions,
+.scene__content .btn {
+  pointer-events: auto;
+}
+
+.nose-hotspot {
+  position: absolute;
+  z-index: 5;
+  /* Fallback only — JS positionNoseHotspot() sets pixel center from noseImagePoint(). */
+  left: 50%;
+  top: 40%;
+  width: clamp(1.5rem, 3.5vw, 2.25rem);
+  height: clamp(1.5rem, 3.5vw, 2.25rem);
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: crosshair;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nose-hotspot:focus-visible {
+  outline: 2px solid rgba(255, 248, 242, 0.85);
+  outline-offset: 4px;
 }
 
 .brand {
@@ -174,23 +256,25 @@ body {
   z-index: 3;
   top: clamp(12%, 18vh, 22%);
   left: clamp(4%, 8vw, 12%);
-  max-width: 11rem;
+  max-width: min(18rem, 72vw);
   padding: 0.85rem 1.15rem;
   border-radius: 1.35rem 1.35rem 1.35rem 0.35rem;
   background: rgba(255, 248, 242, 0.94);
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-size: clamp(1.15rem, 2.6vw, 1.55rem);
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
   box-shadow: 0 18px 50px rgba(28, 20, 16, 0.28);
   opacity: 0;
   transform: translateY(12px) scale(0.92);
   pointer-events: none;
+  --bubble-ms: 3200ms;
 }
 
 .bubble.is-visible {
-  animation: say-hi 2.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: say-hi var(--bubble-ms) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .ambient {
@@ -258,12 +342,65 @@ body {
   }
 }
 
+/* Soft conversational head motion — timed to phrase audio via --talk-ms. */
+@keyframes talk-nod {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  12% {
+    transform: rotate(-0.7deg) translate3d(0, 0.45%, 0);
+  }
+  28% {
+    transform: rotate(0.55deg) translate3d(0.15%, -0.25%, 0);
+  }
+  46% {
+    transform: rotate(-0.45deg) translate3d(-0.1%, 0.3%, 0);
+  }
+  64% {
+    transform: rotate(0.5deg) translate3d(0.12%, -0.2%, 0);
+  }
+  82% {
+    transform: rotate(-0.25deg) translate3d(0, 0.15%, 0);
+  }
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes talk-nod-annoyed {
+  0% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  10% {
+    transform: rotate(0.9deg) translate3d(0.2%, -0.35%, 0);
+  }
+  26% {
+    transform: rotate(-1deg) translate3d(-0.15%, 0.5%, 0);
+  }
+  44% {
+    transform: rotate(0.75deg) translate3d(0.15%, -0.3%, 0);
+  }
+  62% {
+    transform: rotate(-0.7deg) translate3d(-0.1%, 0.35%, 0);
+  }
+  80% {
+    transform: rotate(0.4deg) translate3d(0.08%, -0.15%, 0);
+  }
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+}
+
 @media (min-width: 900px) {
   .scene {
     align-items: center;
   }
 
-  .scene__media img {
+  .scene__portrait-rig {
+    transform-origin: 50% 24%;
+  }
+
+  .scene__media .portrait {
     object-position: center 22%;
   }
 
@@ -279,7 +416,11 @@ body {
 }
 
 @media (max-width: 640px) {
-  .scene__media img {
+  .scene__portrait-rig {
+    transform-origin: 58% 18%;
+  }
+
+  .scene__media .portrait {
     object-position: 58% 12%;
   }
 
@@ -301,5 +442,15 @@ body {
   .bubble.is-visible {
     opacity: 1;
     transform: none;
+  }
+
+  .portrait--smile,
+  .portrait--frown,
+  .scene__wash {
+    transition: none;
+  }
+
+  .scene.is-speaking .scene__portrait-rig {
+    animation: none;
   }
 }
