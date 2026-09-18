@@ -61,7 +61,18 @@ const phrases = [
   { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14, mood: 'annoyed' },
 ]
 
+// Mouth / open-smile center in smiling-girl-hi.png (natural-image fractions).
+// Mobile uses a slightly lower fraction because object-position is 58% 12%.
+function lipsImagePoint() {
+  if (window.matchMedia('(max-width: 640px)').matches) {
+    return { x: 0.52, y: 0.413 }
+  }
+  return { x: 0.5, y: 0.395 }
+}
+const PORTRAIT_SCALE = 1.04
+
 const scene = document.querySelector('.scene')
+const smilePortrait = document.querySelector('.portrait--smile')
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
@@ -73,10 +84,13 @@ const audioCache = phrases.map((phrase) => {
 })
 const moanAudio = new Audio('/phrases/moan.wav')
 moanAudio.preload = 'auto'
+moanAudio.volume = 1
 
 let phraseIndex = 0
 let hideTimer
 let activeAudio = null
+let audioUnlocked = false
+let lastMoanAt = 0
 
 function setMood(mood) {
   scene.classList.toggle('is-annoyed', mood === 'annoyed')
@@ -89,10 +103,65 @@ function stopActiveAudio() {
   activeAudio = null
 }
 
+function unlockAudio() {
+  if (audioUnlocked) return
+  audioUnlocked = true
+  const silent = moanAudio.cloneNode()
+  silent.volume = 0
+  silent.play().then(() => {
+    silent.pause()
+  }).catch(() => {})
+}
+
+function objectPositionY() {
+  if (window.matchMedia('(max-width: 640px)').matches) return 0.12
+  if (window.matchMedia('(min-width: 900px)').matches) return 0.22
+  return 0.18
+}
+
+function objectPositionX() {
+  if (window.matchMedia('(max-width: 640px)').matches) return 0.58
+  return 0.5
+}
+
+function positionLipsHotspot() {
+  const nw = smilePortrait.naturalWidth || 1024
+  const nh = smilePortrait.naturalHeight || 1536
+  const rect = smilePortrait.getBoundingClientRect()
+  const sceneRect = scene.getBoundingClientRect()
+  if (rect.width < 2 || rect.height < 2) return
+
+  // Undo CSS scale(1.04) so object-fit math uses the layout box.
+  const layoutW = rect.width / PORTRAIT_SCALE
+  const layoutH = rect.height / PORTRAIT_SCALE
+  const layoutLeft = rect.left + (rect.width - layoutW) / 2
+  const layoutTop = rect.top + (rect.height - layoutH) / 2
+
+  const cover = Math.max(layoutW / nw, layoutH / nh)
+  const dispW = nw * cover
+  const dispH = nh * cover
+  const offsetX = (layoutW - dispW) * objectPositionX()
+  const offsetY = (layoutH - dispH) * objectPositionY()
+
+  const lipsPoint = lipsImagePoint()
+  let x = layoutLeft - sceneRect.left + offsetX + lipsPoint.x * dispW
+  let y = layoutTop - sceneRect.top + offsetY + lipsPoint.y * dispH
+
+  // Re-apply the same center scale the portrait uses visually.
+  const cx = rect.left - sceneRect.left + rect.width / 2
+  const cy = rect.top - sceneRect.top + rect.height / 2
+  x = cx + (x - cx) * PORTRAIT_SCALE
+  y = cy + (y - cy) * PORTRAIT_SCALE
+
+  const size = Math.max(60, Math.min(rect.width, rect.height) * 0.12)
+  lips.style.left = `${x}px`
+  lips.style.top = `${y}px`
+  lips.style.width = `${size * 1.45}px`
+  lips.style.height = `${size * 0.8}px`
+}
+
 function playPhrase(index) {
   stopActiveAudio()
-  moanAudio.pause()
-  moanAudio.currentTime = 0
 
   const audio = audioCache[index]
   activeAudio = audio
@@ -108,18 +177,28 @@ function playPhrase(index) {
 }
 
 function playMoan() {
+  unlockAudio()
   // Prefer a clean moan over overlapping speech.
   stopActiveAudio()
-  moanAudio.pause()
-  moanAudio.currentTime = 0
-  activeAudio = moanAudio
-  const play = moanAudio.play()
+
+  // Fresh node each time avoids stuck currentTime / interrupted play() states.
+  const clip = moanAudio.cloneNode(true)
+  clip.volume = 1
+  activeAudio = clip
+
+  const play = clip.play()
   if (play && typeof play.catch === 'function') {
-    play.catch(() => {})
+    play.catch(() => {
+      window.setTimeout(() => {
+        clip.currentTime = 0
+        clip.play().catch(() => {})
+      }, 0)
+    })
   }
 }
 
 function greet() {
+  unlockAudio()
   const index = phraseIndex % phrases.length
   phraseIndex += 1
   const phrase = phrases[index]
@@ -145,12 +224,29 @@ function greet() {
   }, visibleMs)
 }
 
+function onLipsActivate(event) {
+  event.preventDefault()
+  event.stopPropagation()
+  const now = Date.now()
+  // pointerdown + click can both fire; keep a single moan per gesture.
+  if (now - lastMoanAt < 280) return
+  lastMoanAt = now
+  playMoan()
+}
+
 sayHi.addEventListener('click', greet)
 again.addEventListener('click', greet)
-lips.addEventListener('click', (event) => {
-  event.stopPropagation()
-  playMoan()
-})
+lips.addEventListener('pointerdown', onLipsActivate)
+lips.addEventListener('click', onLipsActivate)
+
+window.addEventListener('resize', positionLipsHotspot)
+if (smilePortrait.complete) {
+  positionLipsHotspot()
+} else {
+  smilePortrait.addEventListener('load', positionLipsHotspot, { once: true })
+}
+window.setTimeout(positionLipsHotspot, 50)
+window.setTimeout(positionLipsHotspot, 400)
 
 // Soft auto-greet after the portrait settles in
 window.setTimeout(greet, 900)
