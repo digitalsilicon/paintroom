@@ -6,11 +6,20 @@ app.innerHTML = `
   <main class="scene" aria-label="Greeting">
     <div class="scene__media" aria-hidden="true">
       <img
+        class="portrait portrait--smile"
         src="/smiling-girl-hi.png"
         alt=""
         width="1024"
-        height="1365"
+        height="1536"
         fetchpriority="high"
+      />
+      <img
+        class="portrait portrait--frown"
+        src="/frowning-girl-hi.png"
+        alt=""
+        width="864"
+        height="1152"
+        loading="eager"
       />
     </div>
     <div class="scene__wash" aria-hidden="true"></div>
@@ -41,9 +50,10 @@ const phrases = [
   { text: 'Hello!', src: '/phrases/hello.wav', durationSec: 1.87 },
   { text: 'How are you doing?', src: '/phrases/how-are-you.wav', durationSec: 1.9 },
   { text: 'Lovely to see you again.', src: '/phrases/lovely.wav', durationSec: 2.3 },
-  { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14 },
+  { text: 'Stop clicking on me!', src: '/phrases/stop.wav', durationSec: 2.14, mood: 'annoyed' },
 ]
 
+const scene = document.querySelector('.scene')
 const speech = document.querySelector('#speech')
 const sayHi = document.querySelector('#say-hi')
 const again = document.querySelector('#again')
@@ -56,6 +66,10 @@ const audioCache = phrases.map((phrase) => {
 let phraseIndex = 0
 let hideTimer
 let activeAudio = null
+
+function setMood(mood) {
+  scene.classList.toggle('is-annoyed', mood === 'annoyed')
+}
 
 function playPhrase(index) {
   if (activeAudio) {
@@ -89,6 +103,7 @@ function greet() {
 
   speech.textContent = phrase.text
   speech.style.setProperty('--bubble-ms', `${visibleMs}ms`)
+  setMood(phrase.mood)
   speech.classList.remove('is-visible')
   // restart animation
   void speech.offsetWidth
@@ -97,6 +112,7 @@ function greet() {
   clearTimeout(hideTimer)
   hideTimer = setTimeout(() => {
     speech.classList.remove('is-visible')
+    setMood(null)
   }, visibleMs)
 }
 
